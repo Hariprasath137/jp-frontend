@@ -9,6 +9,7 @@ import { Loader2 } from 'lucide-react';
 import AddBike from './pages/AddBike';
 import Inventory from './pages/Inventory';
 import BikeDetails from './pages/BikeDetails';
+import NotificationsPage from './pages/NotificationsPage';
 
 function App() {
   const { user, isInitialized, initAuth } = useAuthStore();
@@ -38,6 +39,7 @@ function App() {
           <Route path="add-bike" element={<AddBike />} />
           <Route path="inventory" element={<Inventory />} />
           <Route path="bike/:id" element={<BikeDetails />} />
+          <Route path="notifications" element={<NotificationsPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
