@@ -1,7 +1,7 @@
 // src/layouts/MobileLayout.tsx
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus, Trash2 } from "lucide-react";
+import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus } from "lucide-react"; // Trash2 ah thookiyachu
 import { cn } from "../lib/utils";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useNotificationStore } from "../stores/useNotificationStore"; 
@@ -15,9 +15,8 @@ export default function MobileLayout() {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
   
-  // FIXED: Ingatha namba setNotifications ah destructure pandrom
-  const { notifications, setNotifications, markAsRead, clearAll } = useNotificationStore();
-  
+  // Zustand Store variables
+  const { notifications, setNotifications } = useNotificationStore(); // ClearAll ah inga theva illa
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
@@ -26,7 +25,7 @@ export default function MobileLayout() {
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   useEffect(() => {
-    // 1. LIVE DB LISTENER: DB la entha change aanalum UI udane maarum
+    // 1. LIVE DB LISTENER
     const q = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
     const unsubDB = onSnapshot(q, (snapshot) => {
       const notifs = snapshot.docs.map(doc => ({
@@ -34,9 +33,11 @@ export default function MobileLayout() {
         ...doc.data()
       })) as any;
       setNotifications(notifs);
+    }, (error) => {
+      console.error("🚨 FIRESTORE RULES ERROR:", error); 
     });
 
-    // 2. SYSTEM POPUP GENERATOR: App open la iruntha mela popup kaatta mattum ithu
+    // 2. SYSTEM POPUP GENERATOR
     if (!messaging) return;
     const unsubFCM = onMessage(messaging, (payload) => {
       if (Notification.permission === 'granted') {
@@ -54,13 +55,13 @@ export default function MobileLayout() {
       unsubDB();
       unsubFCM();
     };
-  }, [setNotifications]); // Dependency la setNotifications pottachu
+  }, [setNotifications]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
     try {
-      await logout(); // Firebase sign out aagum
-      navigate("/login"); // Login page ku poidum
+      await logout(); 
+      navigate("/login"); 
     } catch (error) {
       console.error("Logout failed", error);
     } finally {
@@ -68,6 +69,9 @@ export default function MobileLayout() {
       setShowLogoutAlert(false);
     }
   };
+
+  // Drawer la click panna update aaga
+  const { markAsRead } = useNotificationStore();
 
   return (
     <div className="fixed w-full h-full flex items-center justify-center overflow-hidden bg-slate-100">
@@ -94,12 +98,11 @@ export default function MobileLayout() {
             </button>
           </div>
           
-          {/* Logout Button trigger */}
           <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">
              <button 
                 onClick={() => {
                   setIsDrawerOpen(false);
-                  setShowLogoutAlert(true); // Alert box open aagum
+                  setShowLogoutAlert(true); 
                 }}
                 className="flex items-center w-full p-4 rounded-xl text-red-500 font-bold hover:bg-red-50 gap-4 cursor-pointer border-none bg-transparent transition-colors"
              >
@@ -118,7 +121,6 @@ export default function MobileLayout() {
             </button>
             <span className="font-bold text-slate-900 tracking-tight">JP BIKE</span>
             
-            {/* Bell Icon Update */}
             <button onClick={() => setIsNotificationOpen(true)} className="relative p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 border-none transition-colors">
               <Bell size={20} />
               {unreadCount > 0 && (
@@ -139,37 +141,33 @@ export default function MobileLayout() {
           "absolute inset-y-0 right-0 w-[85%] bg-slate-50 z-[60] border-l border-slate-200 flex flex-col transition-transform duration-300 shadow-2xl",
           isNotificationOpen ? "translate-x-0" : "translate-x-full"
         )}>
-          {/* Header - Shrink-0 keeps it fixed at top */}
+          {/* Header */}
           <div className="flex items-center justify-between p-5 bg-white border-b border-slate-200 shrink-0">
             <div>
               <h2 className="text-lg font-bold text-slate-900">Alerts</h2>
               <p className="text-xs text-slate-500">{unreadCount} unread</p>
             </div>
+            {/* TRASH BUTTON REMOVED FROM HERE */}
             <div className="flex gap-2">
-              {notifications.length > 0 && (
-                <button onClick={clearAll} className="p-1.5 rounded-xl text-red-500 hover:bg-red-50 border-none cursor-pointer transition-colors">
-                  <Trash2 size={18} />
-                </button>
-              )}
               <button onClick={() => setIsNotificationOpen(false)} className="p-1.5 rounded-xl bg-slate-100 text-slate-500 border-none cursor-pointer transition-colors">
                 <X size={18} />
               </button>
             </div>
           </div>
           
-          {/* List - flex-1 lets it scroll */}
+          {/* List */}
           <div className="flex-1 overflow-y-auto p-4 space-y-3">
             {notifications.length === 0 ? (
               <div className="flex items-center justify-center h-full text-slate-400 font-medium">No new alerts</div>
             ) : (
-              notifications.slice(0, 10).map((notif) => ( // Showing only top 10 in panel to keep it clean
+              notifications.slice(0, 10).map((notif) => ( 
                 <div 
                   key={notif.id}
                   onClick={() => {
                     markAsRead(notif.id);
                     if (notif.bikeId) {
                       setIsNotificationOpen(false);
-                      navigate(`/bike/${notif.bikeId}`); // Click panna Bike page ku pogum
+                      navigate(`/bike/${notif.bikeId}`); 
                     }
                   }}
                   className={cn(
@@ -182,26 +180,23 @@ export default function MobileLayout() {
                     {!notif.read && <span className="w-2 h-2 rounded-full bg-blue-500 shrink-0 mt-1.5" />}
                   </div>
                   <p className="text-xs text-slate-500 leading-relaxed mb-2">{notif.body}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">{new Date(notif.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</p>
                 </div>
               ))
             )}
           </div>
 
-          {/* Fixed Button at Bottom - Shrink-0 keeps it fixed */}
-          {notifications.length > 0 && (
-            <div className="p-4 bg-white border-t border-slate-200 shrink-0">
-              <button 
-                onClick={() => {
-                  setIsNotificationOpen(false);
-                  navigate("/notifications"); // View All Page ku pogum
-                }} 
-                className="w-full p-3 bg-slate-50 border border-slate-200 text-blue-600 font-bold rounded-xl shadow-sm cursor-pointer hover:bg-slate-100 transition-colors"
-              >
-                View All History
-              </button>
-            </div>
-          )}
+          {/* FIXED VIEW ALL BUTTON - ALWAYS VISIBLE */}
+          <div className="p-4 bg-white border-t border-slate-200 shrink-0">
+            <button 
+              onClick={() => {
+                setIsNotificationOpen(false);
+                navigate("/notifications"); 
+              }} 
+              className="w-full p-3 bg-slate-50 border border-slate-200 text-blue-600 font-bold rounded-xl shadow-sm cursor-pointer hover:bg-slate-100 transition-colors"
+            >
+              View All History
+            </button>
+          </div>
         </div>
 
         {isNotificationOpen && <div onClick={() => setIsNotificationOpen(false)} className="absolute inset-0 z-[55] bg-black/40 backdrop-blur-sm cursor-pointer" />}
