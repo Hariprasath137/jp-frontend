@@ -20,25 +20,26 @@ export default function MobileLayout() {
   
   const [hasNewAlert, setHasNewAlert] = useState(false);
 
-  // App open-la irukkum pothu puthu notification vantha bell-ah red aakkum
-  useEffect(() => {
+useEffect(() => {
     if (!messaging) return;
     const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("New alert received!", payload);
-      
-      // 1. Bell icon-ah red aakkuthu
+      console.log("🔥 Payload vanthuduchu!", payload);
       setHasNewAlert(true); 
 
-      // 2. App open-la irunthaalum System Popup kaattum (TypeScript fix included)
-      if (Notification.permission === 'granted' && payload.notification) {
-        // Fallback to empty string if undefined
-        const title = payload.notification.title || 'New Alert';
-        const body = payload.notification.body || '';
-
-        new Notification(title, {
-          body: body,
-          icon: '/vite.svg'
-        });
+      // Ippo try block podurom, appo entha error vanthalum console la theriya paduthidum
+      try {
+        if (Notification.permission === 'granted' && payload.notification) {
+          const title = payload.notification.title || 'MotoTrack Alert';
+          const body = payload.notification.body || 'New update received';
+          
+          new Notification(title, {
+            body: body,
+            // Icon-ah vite.svg nu thedaama default logo podurom
+            icon: 'https://cdn-icons-png.flaticon.com/512/2950/2950664.png' 
+          });
+        }
+      } catch (e) {
+        console.error("Popup kaaturathula problem:", e);
       }
     });
     return () => unsubscribe();
