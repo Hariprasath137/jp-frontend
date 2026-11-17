@@ -1,0 +1,15 @@
+/* src/index.css */
+@import "tailwindcss";
+
+/* Unga "White Calm Theme" kaga basic body background set pandrom */
+@theme {
+  --color-primary: #0f172a; /* Slate 900 */
+  --color-calm-bg: #f8fafc; /* Slate 50 - Soft White */
+  --color-calm-surface: #ffffff; /* Pure White for cards */
+}
+
+body {
+  background-color: var(--color-calm-bg);
+  color: var(--color-primary);
+  font-family: system-ui, -apple-system, sans-serif;
+}
