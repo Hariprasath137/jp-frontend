@@ -11,16 +11,27 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
-const messaging = firebase.messaging();
 
-
-// messaging.onBackgroundMessage((payload) => {
-//   console.log('Background Message:', payload);
-//   const notificationTitle = payload.notification.title;
-//   const notificationOptions = {
-//     body: payload.notification.body,
-//     icon: '/vite.svg'
-//   };
-
-//   self.registration.showNotification(notificationTitle, notificationOptions);
-// });
+// Notification Click panna app-ah thiranthu antha URL-ku poga vaikura magic!
+self.addEventListener('notificationclick', function(event) {
+  event.notification.close();
+  
+  // Notification la irunthu bikeId eduukurom (backend la irunthu varanum)
+  const clickAction = event.notification.data?.click_action || '/';
+  
+  event.waitUntil(
+    clients.matchAll({ type: 'window' }).then(windowClients => {
+      // App already open-la iruntha antha tab-ah focus panni URL maathum
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes('jp-bikes') && 'focus' in client) {
+          return client.focus().then(() => client.navigate(clickAction));
+        }
+      }
+      // App open aagalana puthusa open pannum
+      if (clients.openWindow) {
+        return clients.openWindow(clickAction);
+      }
+    })
+  );
+});
