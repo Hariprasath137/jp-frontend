@@ -191,6 +191,7 @@ export default function MobileLayout() {
 
       // Bell icon update & List add
       setHasNewAlert(true);
+      console.log(hasNewAlert)
       addNotification({ title, body, bikeId });
 
       // MOBILE SAFE POPUP GENERATOR
