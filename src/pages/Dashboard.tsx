@@ -15,12 +15,16 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getBikes().then(data => {
-      setBikes(data);
-      setLoading(false);
-    });
-    requestPushPermission();
-  }, []);
+  
+  getBikes().then(data => {
+    setBikes(data);
+    setLoading(false);
+    
+    setTimeout(() => {
+      requestPushPermission();
+    }, 2000);
+  });
+}, []);
 
   // --- Calculations ---
   const inStockBikes = bikes.filter(b => b.status === 'in-stock');

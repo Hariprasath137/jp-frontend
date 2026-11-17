@@ -4,7 +4,10 @@ import { Outlet, useNavigate } from "react-router-dom";
 import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus } from "lucide-react";
 import { cn } from "../lib/utils";
 import { useAuthStore } from "../stores/useAuthStore";
-import ConfirmAlert from "../components/ConfirmAlert"; // Pudhu Component
+import ConfirmAlert from "../components/ConfirmAlert";
+import { onMessage } from "firebase/messaging";
+import { messaging } from "../firebase/config";
+import { useEffect } from "react";
 
 export default function MobileLayout() {
   const navigate = useNavigate();
@@ -15,7 +18,17 @@ export default function MobileLayout() {
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   
-  const unreadCount = 2;
+  const [hasNewAlert, setHasNewAlert] = useState(false);
+
+  // App open-la irukkum pothu puthu notification vantha bell-ah red aakkum
+  useEffect(() => {
+    if (!messaging) return;
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log("New alert received!", payload);
+      setHasNewAlert(true);
+    });
+    return () => unsubscribe();
+  }, []);
 
   // Actual Logout Logic
   const handleLogout = async () => {
@@ -82,9 +95,9 @@ export default function MobileLayout() {
               <Menu size={20} />
             </button>
             <span className="font-bold text-slate-900 tracking-tight">JP BIKE</span>
-            <button onClick={() => setIsNotificationOpen(true)} className="relative p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer border-none">
+            <button onClick={() => { setIsNotificationOpen(true); setHasNewAlert(false); }} className="relative p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 transition-colors cursor-pointer border-none">
               <Bell size={20} />
-              {unreadCount > 0 && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />}
+              {hasNewAlert && <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full border-2 border-white" />}
             </button>
           </header>
           <div className="flex-1 overflow-y-auto relative z-10 no-scrollbar">

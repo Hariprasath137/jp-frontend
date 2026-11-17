@@ -15,14 +15,12 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// Background-la notification vantha epdi kaattanum nu design
 messaging.onBackgroundMessage((payload) => {
-  console.log('Background message received: ', payload);
+  console.log('Background Message:', payload);
   const notificationTitle = payload.notification.title;
   const notificationOptions = {
     body: payload.notification.body,
-    icon: '/vite.svg', // Unga app logo path kudukkalam
-    badge: '/vite.svg',
+    icon: '/vite.svg'
   };
 
   self.registration.showNotification(notificationTitle, notificationOptions);

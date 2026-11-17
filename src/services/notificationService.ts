@@ -1,4 +1,3 @@
-// src/services/notificationService.ts
 import { getToken } from "firebase/messaging";
 import { doc, setDoc } from "firebase/firestore";
 import { messaging, db } from "../firebase/config";
@@ -7,27 +6,21 @@ export const requestPushPermission = async () => {
   try {
     const permission = await Notification.requestPermission();
     if (permission === 'granted') {
-      
-      // Get the token using VAPID key
-      const currentToken = await getToken(messaging, { 
-        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY 
+      // NOTE: Inga unga VAPID key podanum (Step 4 la epdi edukrathu nu solren)
+      const token = await getToken(messaging, {
+        vapidKey: import.meta.env.VITE_FIREBASE_VAPID_KEY
       });
       
-      if (currentToken) {
-        // Token-ah "admin_tokens" table-la save pandrom (Backend ithai thedi thaan message anuppum)
-        await setDoc(doc(db, "admin_tokens", "main_admin"), {
-          token: currentToken,
-          updatedAt: new Date().toISOString(),
-          platform: 'web'
+      if (token) {
+        // Token kedaichathum, database-la save pandrom
+        await setDoc(doc(db, 'admin_tokens', 'main_admin'), { 
+          token: token, 
+          updatedAt: new Date() 
         });
-        console.log("Push Token Saved Successfully!");
-      } else {
-        console.log("No registration token available.");
+        console.log("Token successfully saved to DB!");
       }
-    } else {
-      console.log("Notification permission denied.");
     }
   } catch (error) {
-    console.error("Error getting push token", error);
+    console.error("Push notification error:", error);
   }
 };
