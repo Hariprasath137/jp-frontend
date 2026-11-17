@@ -25,7 +25,21 @@ export default function MobileLayout() {
     if (!messaging) return;
     const unsubscribe = onMessage(messaging, (payload) => {
       console.log("New alert received!", payload);
-      setHasNewAlert(true);
+      
+      // 1. Bell icon-ah red aakkuthu
+      setHasNewAlert(true); 
+
+      // 2. App open-la irunthaalum System Popup kaattum (TypeScript fix included)
+      if (Notification.permission === 'granted' && payload.notification) {
+        // Fallback to empty string if undefined
+        const title = payload.notification.title || 'New Alert';
+        const body = payload.notification.body || '';
+
+        new Notification(title, {
+          body: body,
+          icon: '/vite.svg'
+        });
+      }
     });
     return () => unsubscribe();
   }, []);
