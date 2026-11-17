@@ -178,32 +178,34 @@ export default function MobileLayout() {
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
+  const [hasNewAlert, setHasNewAlert] = useState(false);
 
   useEffect(() => {
     if (!messaging) return;
     const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("🔥 Payload vanthuduchu!", payload);
+      console.log("🔥 Foreground Payload vanthuduchu!", payload);
       
       const title = payload.notification?.title || 'MotoTrack Alert';
       const body = payload.notification?.body || '';
-      const bikeId = payload.data?.bikeId; // Backend la anuppuna ID
+      const bikeId = payload.data?.bikeId;
 
-      // 1. Store la save pandrom
+      // Bell icon update & List add
+      setHasNewAlert(true);
       addNotification({ title, body, bikeId });
 
-      // 2. App open-la irukkum pothu popup
-      try {
-        if (Notification.permission === 'granted') {
-          const popup = new Notification(title, { body, icon: '/vite.svg' });
-          popup.onclick = () => {
-            popup.close();
-            if (bikeId) navigate(`/bike/${bikeId}`); // Popup click panna poga
-          };
-        }
-      } catch (e) { console.error(e); }
+      // MOBILE SAFE POPUP GENERATOR
+      if (Notification.permission === 'granted') {
+        navigator.serviceWorker.ready.then((registration) => {
+          registration.showNotification(title, {
+            body: body,
+            icon: 'https://cdn-icons-png.flaticon.com/512/2950/2950664.png',
+            data: { bikeId: bikeId } // Touch panna poga vendiya data
+          });
+        });
+      }
     });
     return () => unsubscribe();
-  }, [addNotification, navigate]);
+  }, [addNotification]);
 
   const handleLogout = async () => {
     setIsLoggingOut(true);

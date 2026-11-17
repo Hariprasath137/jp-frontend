@@ -11,24 +11,36 @@ const firebaseConfig = {
 };
 
 firebase.initializeApp(firebaseConfig);
+const messaging = firebase.messaging();
 
-// Notification Click panna app-ah thiranthu antha URL-ku poga vaikura magic!
+// 1. Background la popup kaatura Code
+messaging.onBackgroundMessage((payload) => {
+  console.log('Background Message Payload:', payload);
+  
+  const title = payload.notification?.title || payload.data?.title || 'MotoTrack Alert';
+  const options = {
+    body: payload.notification?.body || payload.data?.body || 'New update received',
+    icon: 'https://cdn-icons-png.flaticon.com/512/2950/2950664.png',
+    data: { bikeId: payload.data?.bikeId } // Click panna thevayana ID
+  };
+
+  self.registration.showNotification(title, options);
+});
+
+// 2. Notification-ah Touch Panna, App open aagi Page ku kootitu pogum Code
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
-  
-  // Notification la irunthu bikeId eduukurom (backend la irunthu varanum)
-  const clickAction = event.notification.data?.click_action || '/';
+  const bikeId = event.notification.data?.bikeId;
+  const clickAction = bikeId ? `/bike/${bikeId}` : '/';
   
   event.waitUntil(
     clients.matchAll({ type: 'window' }).then(windowClients => {
-      // App already open-la iruntha antha tab-ah focus panni URL maathum
       for (let i = 0; i < windowClients.length; i++) {
         const client = windowClients[i];
         if (client.url.includes('jp-bikes') && 'focus' in client) {
           return client.focus().then(() => client.navigate(clickAction));
         }
       }
-      // App open aagalana puthusa open pannum
       if (clients.openWindow) {
         return clients.openWindow(clickAction);
       }
