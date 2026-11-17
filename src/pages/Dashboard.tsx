@@ -1,6 +1,6 @@
 // src/pages/Dashboard.tsx
 import { useNavigate } from "react-router-dom";
-import { TrendingUp, Wallet, Bike, IndianRupee, ArrowRight, Clock } from "lucide-react";
+import { TrendingUp, Wallet, Bike, IndianRupee, ArrowRight } from "lucide-react";
 import { useEffect, useState } from "react";
 import { collection, onSnapshot, query, orderBy } from "firebase/firestore";
 import { db } from "../firebase/config";

@@ -1,7 +1,7 @@
 // src/pages/NetProfitPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, TrendingUp, IndianRupee } from "lucide-react";
+import { ArrowLeft, IndianRupee } from "lucide-react";
 import { collection, onSnapshot, query, where } from "firebase/firestore";
 import { db } from "../firebase/config";
 

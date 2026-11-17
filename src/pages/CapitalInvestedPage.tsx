@@ -1,7 +1,7 @@
 // src/pages/CapitalInvestedPage.tsx
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Wallet, IndianRupee } from "lucide-react";
+import { ArrowLeft, IndianRupee } from "lucide-react";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase/config";
 
