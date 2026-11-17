@@ -10,6 +10,9 @@ import AddBike from './pages/AddBike';
 import Inventory from './pages/Inventory';
 import BikeDetails from './pages/BikeDetails';
 import NotificationsPage from './pages/NotificationsPage';
+import CapitalInvestedPage from './pages/CapitalInvestedPage';
+import BikesInStockPage from './pages/BikesInStockPage';
+import NetProfitPage from './pages/NetProfitPage';
 
 function App() {
   const { user, isInitialized, initAuth } = useAuthStore();
@@ -40,6 +43,9 @@ function App() {
           <Route path="inventory" element={<Inventory />} />
           <Route path="bike/:id" element={<BikeDetails />} />
           <Route path="notifications" element={<NotificationsPage />} />
+          <Route path="net-profit" element={<NetProfitPage />} />
+          <Route path="capital" element={<CapitalInvestedPage />} />
+          <Route path="stock-details" element={<BikesInStockPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
