@@ -1,6 +1,6 @@
 // src/pages/Inventory.tsx
 import { useEffect, useState, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom"; // <-- Link import panniyachu
 import { Loader2, Plus, Bike as BikeIcon, Search, IndianRupee, Calendar } from "lucide-react";
 import { getBikes } from "../services/bikeService";
 import type { Bike } from "../types";
@@ -118,10 +118,20 @@ export default function Inventory() {
         ) : (
           <div className="grid grid-cols-1 gap-4">
             {filteredBikes.map((bike) => (
-              <div key={bike.id} onClick={() => navigate(`/bike/${bike.id}`)} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98]">
+              /* THE FIX: Changed from div with onClick to <Link> */
+              <Link to={`/bike/${bike.id}`} key={bike.id} className="bg-white p-3 rounded-2xl shadow-sm border border-slate-100 flex gap-4 cursor-pointer hover:shadow-md transition-all active:scale-[0.98] no-underline">
                 <div className="w-28 h-28 rounded-xl bg-slate-100 overflow-hidden shrink-0 relative">
-                  {bike.images?.[0] ? <img src={bike.images[0]} className="w-full h-full object-cover" /> : <div className="w-full h-full flex items-center justify-center"><BikeIcon className="text-slate-300"/></div>}
-                  {bike.status === 'sold' && <div className="absolute inset-0 bg-black/40 flex items-center justify-center"><span className="text-white font-black uppercase tracking-widest text-[10px] bg-red-600 px-2 py-1 rounded">SOLD</span></div>}
+                  {bike.images?.[0] ? (
+                    /* THE FIX: Added pointer-events-none and select-none to image */
+                    <img src={bike.images[0]} className="w-full h-full object-cover pointer-events-none select-none" alt={bike.model} />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center"><BikeIcon className="text-slate-300"/></div>
+                  )}
+                  {bike.status === 'sold' && (
+                    <div className="absolute inset-0 bg-black/40 flex items-center justify-center pointer-events-none">
+                      <span className="text-white font-black uppercase tracking-widest text-[10px] bg-red-600 px-2 py-1 rounded">SOLD</span>
+                    </div>
+                  )}
                 </div>
                 <div className="flex-1 min-w-0 py-1 flex flex-col justify-between">
                   <div>
@@ -135,7 +145,7 @@ export default function Inventory() {
                     </p>
                   </div>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}

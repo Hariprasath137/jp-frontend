@@ -1,7 +1,7 @@
 // src/pages/Dashboard.tsx
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, TrendingUp, Wallet, Bike, AlertCircle, IndianRupee, ChevronRight, Activity } from "lucide-react";
+import { Loader2, TrendingUp, Wallet, Bike, AlertCircle, IndianRupee, ChevronRight, Activity, Bell } from "lucide-react";
 import { getBikes } from "../services/bikeService";
 import type { Bike as BikeType } from "../types";
 import { useAuthStore } from "../stores/useAuthStore";
@@ -13,30 +13,41 @@ export default function Dashboard() {
   
   const [bikes, setBikes] = useState<BikeType[]>([]);
   const [loading, setLoading] = useState(true);
+  
+  // Notification status track panna puthu state
+  const [pushStatus, setPushStatus] = useState<string>('granted'); 
 
   useEffect(() => {
-  
-  getBikes().then(data => {
-    setBikes(data);
-    setLoading(false);
-    
-    setTimeout(() => {
-      requestPushPermission();
-    }, 2000);
-  });
-}, []);
+    // Check if browser supports notifications on load
+    if ('Notification' in window) {
+      setPushStatus(Notification.permission);
+    }
+
+    getBikes().then(data => {
+      setBikes(data);
+      setLoading(false);
+    });
+  }, []);
+
+  // Button click panna intha function run aagum
+  const handleEnableNotifications = async () => {
+    await requestPushPermission();
+    if ('Notification' in window) {
+      setPushStatus(Notification.permission); // Permission kudutha udane state update aagum
+    }
+  };
 
   // --- Calculations ---
   const inStockBikes = bikes.filter(b => b.status === 'in-stock');
   const soldBikes = bikes.filter(b => b.status === 'sold');
 
-  // Total Capital Invested (In-stock bikes cost + challans + expenses)
+  // Total Capital Invested
   const totalInvested = inStockBikes.reduce((sum, bike) => {
     const expenses = bike.expenses?.reduce((e, exp) => e + exp.amount, 0) || 0;
     return sum + bike.purchasePrice + (bike.pendingChallan || 0) + expenses;
   }, 0);
 
-  // Total Net Profit (Sold bikes profit)
+  // Total Net Profit
   const totalProfit = soldBikes.reduce((sum, bike) => {
     const expenses = bike.expenses?.reduce((e, exp) => e + exp.amount, 0) || 0;
     const actualCost = bike.purchasePrice + (bike.pendingChallan || 0) + expenses;
@@ -47,7 +58,7 @@ export default function Dashboard() {
   const bikesWithChallan = inStockBikes.filter(b => (b.pendingChallan || 0) > 0).length;
 
   if (loading) {
-    return <div className="h-full flex flex-col items-center justify-center bg-slate-50"><Loader2 size={32} className="animate-spin text-brand-blue" /></div>;
+    return <div className="h-full flex flex-col items-center justify-center bg-slate-50"><Loader2 size={32} className="animate-spin text-blue-500" /></div>;
   }
 
   return (
@@ -61,7 +72,7 @@ export default function Dashboard() {
         <p className="text-slate-400 text-sm font-semibold mt-1">Here is your business overview</p>
       </div>
 
-      {/* Main Stats Cards (Overlapping the dark header) */}
+      {/* Main Stats Cards */}
       <div className="px-5 -mt-10 space-y-4 relative z-10">
         
         {/* Profit Card */}
@@ -98,11 +109,20 @@ export default function Dashboard() {
             <p className="text-lg font-black text-slate-900">{inStockBikes.length} Units</p>
           </div>
         </div>
-
       </div>
 
       {/* Actionable Alerts & Quick Links */}
       <div className="px-5 mt-6 space-y-4">
+        
+        {/* NOTIFICATION BUTTON - HIDDEN IF GRANTED OR DENIED */}
+        {pushStatus === 'default' && (
+          <button 
+            onClick={handleEnableNotifications} 
+            className="w-full bg-blue-600 text-white p-4 rounded-2xl font-black shadow-lg shadow-blue-600/30 flex items-center justify-center gap-2 cursor-pointer border-none active:scale-[0.98] transition-transform"
+          >
+            <Bell size={20} className="animate-bounce" /> Enable Push Alerts
+          </button>
+        )}
         
         {/* Challan Alert */}
         {bikesWithChallan > 0 && (
@@ -119,7 +139,7 @@ export default function Dashboard() {
         )}
 
         <h3 className="text-sm font-black text-slate-900 pt-2 flex items-center gap-2">
-          <Activity size={16} className="text-brand-blue" /> Recent Additions
+          <Activity size={16} className="text-blue-500" /> Recent Additions
         </h3>
         
         {/* Recent Bikes List */}
@@ -129,9 +149,9 @@ export default function Dashboard() {
           ) : (
              <div className="divide-y divide-slate-100">
                {inStockBikes.slice(0, 3).map((bike) => (
-                 <div key={bike.id} onClick={() => navigate(`/bike/${bike.id}`)} className="p-4 flex items-center gap-4 hover:bg-slate-50 cursor-pointer transition-colors">
+                 <div key={bike.id} onClick={() => navigate(`/bike/${bike.id}`)} className="p-4 flex items-center gap-4 hover:bg-slate-50 cursor-pointer transition-colors block">
                    <div className="w-12 h-12 rounded-xl bg-slate-100 overflow-hidden shrink-0">
-                     {bike.images?.[0] ? <img src={bike.images[0]} className="w-full h-full object-cover" /> : <Bike size={20} className="m-auto h-full text-slate-300" />}
+                     {bike.images?.[0] ? <img src={bike.images[0]} className="w-full h-full object-cover pointer-events-none select-none" /> : <Bike size={20} className="m-auto h-full text-slate-300" />}
                    </div>
                    <div className="flex-1 min-w-0">
                      <p className="text-sm font-black text-slate-900 truncate">{bike.make} {bike.model}</p>
@@ -147,7 +167,7 @@ export default function Dashboard() {
           )}
           
           {inStockBikes.length > 3 && (
-            <button onClick={() => navigate("/inventory")} className="w-full p-4 text-xs font-black text-brand-blue bg-slate-50 hover:bg-slate-100 transition-colors flex justify-center items-center gap-1 cursor-pointer border-none">
+            <button onClick={() => navigate("/inventory")} className="w-full p-4 text-xs font-black text-blue-600 bg-slate-50 hover:bg-slate-100 transition-colors flex justify-center items-center gap-1 cursor-pointer border-none">
               View All Inventory <ChevronRight size={14} />
             </button>
           )}
