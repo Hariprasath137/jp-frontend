@@ -1,7 +1,7 @@
 // src/pages/AddBike.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Camera, Loader2, ArrowLeft, Plus, X, FileText, IdCard, ImagePlus, ShieldCheck } from "lucide-react";
+import {  Loader2, ArrowLeft, Plus, X, FileText, IdCard, ImagePlus, ShieldCheck } from "lucide-react";
 import { uploadImageToCloudinary } from "../lib/uploadImage";
 import { addNewBike } from "../services/bikeService";
 import type { Bike } from "../types";
