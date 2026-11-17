@@ -13,21 +13,15 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const messaging = firebase.messaging();
 
-// 1. Background la popup kaatura Code
 messaging.onBackgroundMessage((payload) => {
-  console.log('Background Message Payload:', payload);
-  
   const title = payload.notification?.title || payload.data?.title || 'MotoTrack Alert';
-  const options = {
+  self.registration.showNotification(title, {
     body: payload.notification?.body || payload.data?.body || 'New update received',
     icon: 'https://cdn-icons-png.flaticon.com/512/2950/2950664.png',
-    data: { bikeId: payload.data?.bikeId } // Click panna thevayana ID
-  };
-
-  self.registration.showNotification(title, options);
+    data: { bikeId: payload.data?.bikeId } 
+  });
 });
 
-// 2. Notification-ah Touch Panna, App open aagi Page ku kootitu pogum Code
 self.addEventListener('notificationclick', function(event) {
   event.notification.close();
   const bikeId = event.notification.data?.bikeId;
@@ -41,9 +35,7 @@ self.addEventListener('notificationclick', function(event) {
           return client.focus().then(() => client.navigate(clickAction));
         }
       }
-      if (clients.openWindow) {
-        return clients.openWindow(clickAction);
-      }
+      if (clients.openWindow) return clients.openWindow(clickAction);
     })
   );
 });

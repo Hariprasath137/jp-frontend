@@ -1,6 +1,6 @@
-// src/stores/useNotificationStore.ts
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware'; // ITHU THAAN MAGIC
+import { doc, updateDoc, writeBatch } from 'firebase/firestore';
+import { db } from '../firebase/config';
 
 export interface AppNotification {
   id: string;
@@ -13,32 +13,28 @@ export interface AppNotification {
 
 interface NotificationStore {
   notifications: AppNotification[];
-  addNotification: (notif: Omit<AppNotification, 'id' | 'timestamp' | 'read'>) => void;
-  markAsRead: (id: string) => void;
-  clearAll: () => void;
+  setNotifications: (notifs: AppNotification[]) => void;
+  markAsRead: (id: string) => Promise<void>;
+  clearAll: () => Promise<void>;
 }
 
-export const useNotificationStore = create<NotificationStore>()(
-  persist(
-    (set) => ({
-      notifications: [],
-      addNotification: (notif) => set((state) => ({
-        notifications: [{
-          ...notif,
-          id: Math.random().toString(36).substring(7),
-          timestamp: Date.now(),
-          read: false
-        }, ...state.notifications]
-      })),
-      markAsRead: (id) => set((state) => ({
-        notifications: state.notifications.map(n => 
-          n.id === id ? { ...n, read: true } : n
-        )
-      })),
-      clearAll: () => set({ notifications: [] })
-    }),
-    {
-      name: 'jp-bike-notifications', // Local storage key
-    }
-  )
-);
+export const useNotificationStore = create<NotificationStore>((set, get) => ({
+  notifications: [],
+  
+  // DB la irunthu vara data va UI ku set pannum
+  setNotifications: (notifs) => set({ notifications: notifs }),
+  
+  // DB la 'read' status ah update pannum
+  markAsRead: async (id) => {
+    await updateDoc(doc(db, 'notifications', id), { read: true });
+  },
+  
+  // Clear All kudutha DB la irunthu total ah delete pannidum
+  clearAll: async () => {
+    const batch = writeBatch(db);
+    get().notifications.forEach(n => {
+      batch.delete(doc(db, 'notifications', n.id));
+    });
+    await batch.commit();
+  }
+}));

@@ -8,47 +8,53 @@ import { useNotificationStore } from "../stores/useNotificationStore";
 import ConfirmAlert from "../components/ConfirmAlert";
 import { onMessage } from "firebase/messaging";
 import { messaging } from "../firebase/config";
+import { collection, query, orderBy, onSnapshot } from "firebase/firestore";
+import { db } from "../firebase/config";
 
 export default function MobileLayout() {
   const navigate = useNavigate();
   const { logout } = useAuthStore();
   
-  // Zustand Store variables
-  const { notifications, addNotification, markAsRead, clearAll } = useNotificationStore();
+  // FIXED: Ingatha namba setNotifications ah destructure pandrom
+  const { notifications, setNotifications, markAsRead, clearAll } = useNotificationStore();
+  
   const unreadCount = notifications.filter(n => !n.read).length;
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
   const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const [showLogoutAlert, setShowLogoutAlert] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [hasNewAlert, setHasNewAlert] = useState(false);
 
   useEffect(() => {
+    // 1. LIVE DB LISTENER: DB la entha change aanalum UI udane maarum
+    const q = query(collection(db, 'notifications'), orderBy('timestamp', 'desc'));
+    const unsubDB = onSnapshot(q, (snapshot) => {
+      const notifs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as any;
+      setNotifications(notifs);
+    });
+
+    // 2. SYSTEM POPUP GENERATOR: App open la iruntha mela popup kaatta mattum ithu
     if (!messaging) return;
-    const unsubscribe = onMessage(messaging, (payload) => {
-      console.log("🔥 Foreground Payload vanthuduchu!", payload);
-      
-      const title = payload.notification?.title || 'MotoTrack Alert';
-      const body = payload.notification?.body || '';
-      const bikeId = payload.data?.bikeId;
-
-      // Bell icon update & List add
-      setHasNewAlert(true);
-      addNotification({ title, body, bikeId });
-
-      // MOBILE SAFE POPUP GENERATOR
+    const unsubFCM = onMessage(messaging, (payload) => {
       if (Notification.permission === 'granted') {
         navigator.serviceWorker.ready.then((registration) => {
-          registration.showNotification(title, {
-            body: body,
+          registration.showNotification(payload.notification?.title || 'MotoTrack Alert', {
+            body: payload.notification?.body || '',
             icon: 'https://cdn-icons-png.flaticon.com/512/2950/2950664.png',
-            data: { bikeId: bikeId } // Touch panna poga vendiya data
+            data: { bikeId: payload.data?.bikeId }
           });
         });
       }
     });
-    return () => unsubscribe();
-  }, [addNotification]);
+
+    return () => {
+      unsubDB();
+      unsubFCM();
+    };
+  }, [setNotifications]); // Dependency la setNotifications pottachu
 
   const handleLogout = async () => {
     setIsLoggingOut(true);
@@ -113,11 +119,11 @@ export default function MobileLayout() {
             <span className="font-bold text-slate-900 tracking-tight">JP BIKE</span>
             
             {/* Bell Icon Update */}
-            <button onClick={() => { setIsNotificationOpen(true); setHasNewAlert(false); }} className="relative p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 border-none transition-colors">
+            <button onClick={() => setIsNotificationOpen(true)} className="relative p-2 rounded-xl bg-slate-100 text-slate-500 hover:text-slate-900 border-none transition-colors">
               <Bell size={20} />
-              {(unreadCount > 0 || hasNewAlert) && (
+              {unreadCount > 0 && (
                 <span className="absolute -top-1 -right-1 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white border-2 border-white">
-                  {unreadCount > 0 ? unreadCount : '!'}
+                  {unreadCount}
                 </span>
               )}
             </button>
