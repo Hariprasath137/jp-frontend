@@ -21,6 +21,11 @@ export default function Dashboard() {
     // Check if browser supports notifications on load
     if ('Notification' in window) {
       setPushStatus(Notification.permission);
+      
+      // ITHU THAAN PUTHU LINE: Already permission iruntha, silent ah token fetch panni DB la podum
+      if (Notification.permission === 'granted') {
+        requestPushPermission();
+      }
     }
 
     getBikes().then(data => {
