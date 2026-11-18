@@ -33,7 +33,7 @@ export interface Bike {
   sellerPhone: string;
   
   // Stock Status
-  status: 'in-stock' | 'sold';
+  status: 'in-stock' | 'sold' | 'returned';
   expenses: Expense[];
   
   // Media (Photos & Docs)

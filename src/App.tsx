@@ -13,6 +13,8 @@ import NotificationsPage from './pages/NotificationsPage';
 import CapitalInvestedPage from './pages/CapitalInvestedPage';
 import BikesInStockPage from './pages/BikesInStockPage';
 import NetProfitPage from './pages/NetProfitPage';
+import ReturnedBikesPage from './pages/ReturnedBikesPage';
+import EditBikePage from './pages/EditBikePage';
 
 function App() {
   const { user, isInitialized, initAuth } = useAuthStore();
@@ -45,6 +47,8 @@ function App() {
           <Route path="notifications" element={<NotificationsPage />} />
           <Route path="net-profit" element={<NetProfitPage />} />
           <Route path="capital" element={<CapitalInvestedPage />} />
+          <Route path="returned-bikes" element={<ReturnedBikesPage />} />
+          <Route path="edit-bike/:id" element={<EditBikePage />} />
           <Route path="stock-details" element={<BikesInStockPage />} />
         </Route>
       </Routes>

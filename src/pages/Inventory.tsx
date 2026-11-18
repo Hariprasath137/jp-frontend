@@ -1,7 +1,7 @@
 // src/pages/Inventory.tsx
 import { useEffect, useState, useMemo } from "react";
 import { useNavigate, Link } from "react-router-dom"; // <-- Link import panniyachu
-import { Loader2, Plus, Bike as BikeIcon, Search, IndianRupee, Calendar } from "lucide-react";
+import { Loader2, Plus, Bike as BikeIcon, Search, IndianRupee, Calendar, ArrowLeft } from "lucide-react";
 import { getBikes } from "../services/bikeService";
 import type { Bike } from "../types";
 import { cn } from "../lib/utils";
@@ -39,6 +39,10 @@ export default function Inventory() {
   // Apply Filters
   const filteredBikes = useMemo(() => {
     return bikes.filter(bike => {
+      // 1. Hide returned bikes entirely from Inventory
+      if (bike.status === 'returned') return false;
+
+      // 2. Normal filters
       const matchSearch = bike.make.toLowerCase().includes(search.toLowerCase()) || 
                           bike.model.toLowerCase().includes(search.toLowerCase()) || 
                           bike.regNo.toLowerCase().includes(search.toLowerCase());
@@ -54,9 +58,14 @@ export default function Inventory() {
         
         {/* Header */}
         <div className="px-5 pt-4 pb-3 flex justify-between items-center">
-          <div>
-            <h1 className="text-xl font-bold text-slate-900 leading-tight">Inventory</h1>
-            <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{filteredBikes.length} Bikes Found</p>
+          <div className="flex items-center gap-3">
+            <button onClick={() => navigate(-1)} className="w-10 h-10 rounded-xl bg-slate-100 text-slate-600 flex items-center justify-center border-none cursor-pointer hover:bg-slate-200">
+              <ArrowLeft size={20} />
+            </button>
+            <div>
+              <h1 className="text-xl font-bold text-slate-900 leading-tight">Inventory</h1>
+              <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">{filteredBikes.length} Bikes</p>
+            </div>
           </div>
           <button onClick={() => navigate("/add-bike")} className="w-10 h-10 bg-slate-900 text-white rounded-xl flex items-center justify-center shadow-md hover:bg-slate-800 transition-colors border-none cursor-pointer">
             <Plus size={20} />

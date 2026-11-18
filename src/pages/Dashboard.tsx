@@ -29,10 +29,11 @@ export default function Dashboard() {
         // Stats Calculation
         if (b.status === 'sold') {
           profit += (sold - (purchase + expense));
-        } else {
+          capital += (purchase + expense);
+        } else if (b.status === 'in-stock') {
           stockCount++;
+          capital += (purchase + expense);
         }
-        capital += (purchase + expense);
 
         // Collect recent 5 bikes
         if (index < 5) {
