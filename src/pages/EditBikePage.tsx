@@ -1,7 +1,7 @@
 // src/pages/EditBikePage.tsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, Save, IndianRupee, ImagePlus, X } from "lucide-react";
+import { Loader2, ArrowLeft, Save, IndianRupee, ImagePlus, X, CheckCircle } from "lucide-react";
 import { getBikeById, updateBike } from "../services/bikeService";
 import { uploadImageToCloudinary } from "../lib/uploadImage";
 import type { Bike } from "../types";
@@ -73,9 +73,7 @@ export default function EditBikePage() {
   };
 
   const removeDoc = (key: string) => {
-    // Clear from new files selection
     setDocFiles(prev => ({ ...prev, [key]: null }));
-    // Clear from existing form data so it deletes on save
     setFormData(prev => ({ ...prev, [key]: "" }));
   };
 
@@ -195,6 +193,29 @@ export default function EditBikePage() {
             </div>
           </div>
 
+          {/* ✨ NEW SECTION: Sales Details (Only visible if the bike is sold) ✨ */}
+          {formData.status === 'sold' && (
+            <div className="bg-green-50/50 p-5 rounded-3xl shadow-sm border border-green-100 space-y-4">
+              <h2 className="text-sm font-black text-green-800 mb-2 border-b border-green-200/50 pb-2 flex items-center gap-2">
+                <CheckCircle size={16} className="text-green-600" /> Sales Information
+              </h2>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[10px] font-extrabold text-green-700 uppercase tracking-widest mb-1.5">Final Sold Price</label>
+                  <div className="relative">
+                    <IndianRupee size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-green-600" />
+                    <input type="number" name="soldPrice" value={formData.soldPrice || ""} onChange={handleChange} required className="w-full pl-9 pr-4 py-3 rounded-xl bg-white border border-green-200 outline-none text-sm font-black text-slate-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/20" />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-[10px] font-extrabold text-green-700 uppercase tracking-widest mb-1.5">Sold Date</label>
+                  <input type="date" name="soldDate" value={formData.soldDate || ""} onChange={handleChange} required className="w-full px-4 py-3 rounded-xl bg-white border border-green-200 outline-none text-sm font-bold text-slate-900 focus:border-green-500 focus:ring-2 focus:ring-green-500/20" />
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Section 2: Vehicle Info */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
             <h2 className="text-sm font-black text-slate-900 mb-2 border-b border-slate-100 pb-2">Vehicle Information</h2>
@@ -264,7 +285,7 @@ export default function EditBikePage() {
             </div>
           </div>
 
-          {/* ✨ NEW SECTION: Documents Editor ✨ */}
+          {/* Documents Editor */}
           <div className="bg-white p-5 rounded-3xl shadow-sm border border-slate-100 space-y-4">
             <h2 className="text-sm font-black text-slate-900 mb-2 border-b border-slate-100 pb-2">Documents</h2>
             

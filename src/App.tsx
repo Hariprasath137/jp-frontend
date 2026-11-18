@@ -15,6 +15,7 @@ import BikesInStockPage from './pages/BikesInStockPage';
 import NetProfitPage from './pages/NetProfitPage';
 import ReturnedBikesPage from './pages/ReturnedBikesPage';
 import EditBikePage from './pages/EditBikePage';
+import SoldBikesPage from './pages/SoldBikesPage';
 
 function App() {
   const { user, isInitialized, initAuth } = useAuthStore();
@@ -50,6 +51,7 @@ function App() {
           <Route path="returned-bikes" element={<ReturnedBikesPage />} />
           <Route path="edit-bike/:id" element={<EditBikePage />} />
           <Route path="stock-details" element={<BikesInStockPage />} />
+          <Route path="sold-bikes" element={<SoldBikesPage />} />
         </Route>
       </Routes>
     </BrowserRouter>

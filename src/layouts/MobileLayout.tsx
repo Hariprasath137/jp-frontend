@@ -1,7 +1,7 @@
 // src/layouts/MobileLayout.tsx
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus, Undo2 } from "lucide-react"; // Trash2 ah thookiyachu
+import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus, Undo2, CheckCircle } from "lucide-react"; // Trash2 ah thookiyachu
 import { cn } from "../lib/utils";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useNotificationStore } from "../stores/useNotificationStore"; 
@@ -95,6 +95,9 @@ export default function MobileLayout() {
             </button>
             <button onClick={() => { navigate("/add-bike"); setIsDrawerOpen(false); }} className="flex items-center w-full p-4 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold gap-4 cursor-pointer border-none bg-transparent transition-colors">
               <div className="bg-slate-900 text-white p-1 rounded-md"><Plus size={16} /></div> Add New Bike
+            </button>
+            <button onClick={() => { navigate("/sold-bikes"); setIsDrawerOpen(false); }} className="flex items-center w-full p-4 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold gap-4 cursor-pointer border-none bg-transparent transition-colors">
+              <CheckCircle size={20} className="text-slate-400" /> Sold Bikes
             </button>
             <button onClick={() => { navigate("/returned-bikes"); setIsDrawerOpen(false); }} className="flex items-center w-full p-4 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold gap-4 cursor-pointer border-none bg-transparent transition-colors">
               <Undo2 size={20} className="text-slate-400" /> Returned Bikes
