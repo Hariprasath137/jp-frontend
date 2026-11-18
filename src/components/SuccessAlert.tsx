@@ -1,6 +1,5 @@
 // src/components/SuccessAlert.tsx
 import { CheckCircle2 } from "lucide-react";
-import { cn } from "../lib/utils";
 
 interface SuccessAlertProps {
   isOpen: boolean;

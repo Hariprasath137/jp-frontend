@@ -5,7 +5,6 @@ import { Loader2, ArrowLeft, Save, IndianRupee, ImagePlus, X } from "lucide-reac
 import { getBikeById, updateBike } from "../services/bikeService";
 import { uploadImageToCloudinary } from "../lib/uploadImage";
 import type { Bike } from "../types";
-import { cn } from "../lib/utils";
 
 export default function EditBikePage() {
   const { id } = useParams();
