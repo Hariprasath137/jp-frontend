@@ -1,7 +1,7 @@
 // src/pages/BikeDetails.tsx
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, Edit, CheckCircle, IndianRupee, MapPin, User, Phone, ImagePlus, Images, Plus, X, Wrench, Trash2, Undo2 } from "lucide-react";
+import { Loader2, ArrowLeft, Edit, CheckCircle, IndianRupee, MapPin, User, Phone, ImagePlus, Images, Plus, X, Wrench, Trash2, Undo2, Download } from "lucide-react";
 import { getBikeById, updateBike } from "../services/bikeService";
 import { uploadImageToCloudinary } from "../lib/uploadImage";
 import { doc, deleteDoc, updateDoc } from "firebase/firestore";
@@ -22,18 +22,22 @@ export default function BikeDetails() {
   const [showSoldModal, setShowSoldModal] = useState(false);
   const [showExpenseModal, setShowExpenseModal] = useState(false);
   
-  // NEW: Danger Modals
+  // Danger Modals
   const [showDeleteAlert, setShowDeleteAlert] = useState(false);
   const [showReturnAlert, setShowReturnAlert] = useState(false);
   const [returnReason, setReturnReason] = useState("");
   const [isProcessingAction, setIsProcessingAction] = useState(false);
 
+  // Document & Download State
   const [viewDoc, setViewDoc] = useState<{url: string, title: string} | null>(null);
+  const [isDownloading, setIsDownloading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   
-  // Expense Form State
+  // Expense Form State (Add + Edit + Delete)
   const [expDesc, setExpDesc] = useState("");
   const [expAmt, setExpAmt] = useState("");
+  const [editingExpenseId, setEditingExpenseId] = useState<string | null>(null);
+  const [expenseToDelete, setExpenseToDelete] = useState<Expense | null>(null);
 
   // Sold Form State
   const [soldPrice, setSoldPrice] = useState("");
@@ -42,6 +46,9 @@ export default function BikeDetails() {
   const [buyerPhone, setBuyerPhone] = useState("");
   const [buyerAddress, setBuyerAddress] = useState("");
   const [buyerIdFile, setBuyerIdFile] = useState<{file: File, preview: string} | null>(null);
+
+  // Success Alert State
+  const [successAction, setSuccessAction] = useState<{title: string, message: string} | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -56,17 +63,43 @@ export default function BikeDetails() {
   const actualTotalCost = (bike?.purchasePrice || 0) + (bike?.pendingChallan || 0) + totalExpenses;
   const expectedProfit = bike && soldPrice ? (Number(soldPrice) - actualTotalCost) : 0;
 
-  // NEW: State for Success Alerts
-  const [successAction, setSuccessAction] = useState<{title: string, message: string} | null>(null);
+  // --- DOWNLOAD IMAGE HELPER (Works for Photos & Documents) ---
+  const handleDownloadImage = async (url: string, label: string) => {
+    if (!url || isDownloading) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(url);
+      if (!response.ok) throw new Error("Fetch failed");
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const ext = blob.type.split("/")[1] || "jpg";
+      const safeName = `${bike?.regNo || "JP_Bike"}_${label}`.replace(/[^a-zA-Z0-9_-]/g, "_");
 
-  // --- ACTIONS ---
+      const link = document.createElement("a");
+      link.href = blobUrl;
+      link.download = `${safeName}.${ext}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      // Fallback: Cloudinary direct download flag
+      const fallbackUrl = url.includes("/upload/")
+        ? url.replace("/upload/", "/upload/fl_attachment/")
+        : url;
+      window.open(fallbackUrl, "_blank");
+    } finally {
+      setIsDownloading(false);
+    }
+  };
+
+  // --- BIKE ACTIONS ---
   const handleDelete = async () => {
     setIsProcessingAction(true);
     try {
       await deleteDoc(doc(db, "bikes", id!));
       setShowDeleteAlert(false);
       setSuccessAction({ title: "Deleted!", message: "Bike has been permanently removed." });
-      
       setTimeout(() => navigate("/inventory"), 1500); 
     } catch (error) {
       alert("Error deleting bike");
@@ -76,17 +109,15 @@ export default function BikeDetails() {
 
   const handleReturn = async (e?: React.FormEvent) => {
     if (e) e.preventDefault(); 
-    
     setIsProcessingAction(true);
     try {
       await updateDoc(doc(db, "bikes", id!), {
         status: "returned",
         returnedDate: new Date().toISOString(),
-        returnReason: returnReason || "No reason provided" 
+        returnReason: returnReason || "No reason provided"
       });
       setShowReturnAlert(false);
       setSuccessAction({ title: "Returned!", message: "Bike moved to Returned Vehicles list." });
-      
       setTimeout(() => navigate("/returned-bikes"), 1500);
     } catch (error) {
       alert("Error returning bike");
@@ -94,29 +125,79 @@ export default function BikeDetails() {
     setIsProcessingAction(false);
   };
 
-  const handleAddExpense = async (e: React.FormEvent) => {
+  // --- EXPENSE ACTIONS (ADD / EDIT / DELETE) ---
+  const openAddExpenseModal = () => {
+    setEditingExpenseId(null);
+    setExpDesc("");
+    setExpAmt("");
+    setShowExpenseModal(true);
+  };
+
+  const openEditExpenseModal = (exp: Expense) => {
+    setEditingExpenseId(exp.id);
+    setExpDesc(exp.description);
+    setExpAmt(String(exp.amount));
+    setShowExpenseModal(true);
+  };
+
+  const closeExpenseModal = () => {
+    setShowExpenseModal(false);
+    setEditingExpenseId(null);
+    setExpDesc("");
+    setExpAmt("");
+  };
+
+  const handleSaveExpense = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !bike) return;
     setIsSubmitting(true);
     try {
-      const newExpense: Expense = {
-        id: Date.now().toString(),
-        description: expDesc,
-        amount: Number(expAmt),
-        date: new Date().toISOString().split("T")[0]
-      };
-      const updatedExpenses = [...(bike.expenses || []), newExpense];
+      let updatedExpenses: Expense[];
+
+      if (editingExpenseId) {
+        // Edit existing expense
+        updatedExpenses = (bike.expenses || []).map(exp =>
+          exp.id === editingExpenseId
+            ? { ...exp, description: expDesc, amount: Number(expAmt) }
+            : exp
+        );
+      } else {
+        // Add new expense
+        const newExpense: Expense = {
+          id: Date.now().toString(),
+          description: expDesc,
+          amount: Number(expAmt),
+          date: new Date().toISOString().split("T")[0]
+        };
+        updatedExpenses = [...(bike.expenses || []), newExpense];
+      }
+
       await updateBike(id, { expenses: updatedExpenses });
       setBike({ ...bike, expenses: updatedExpenses });
-      setShowExpenseModal(false);
-      setExpDesc(""); setExpAmt(""); 
+      closeExpenseModal();
     } catch (error) {
-      alert("Failed to add expense.");
+      alert("Failed to save expense.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleDeleteExpense = async () => {
+    if (!id || !bike || !expenseToDelete) return;
+    setIsProcessingAction(true);
+    try {
+      const updatedExpenses = (bike.expenses || []).filter(exp => exp.id !== expenseToDelete.id);
+      await updateBike(id, { expenses: updatedExpenses });
+      setBike({ ...bike, expenses: updatedExpenses });
+      setExpenseToDelete(null);
+    } catch (error) {
+      alert("Failed to delete expense.");
+    } finally {
+      setIsProcessingAction(false);
+    }
+  };
+
+  // --- MARK AS SOLD ---
   const handleMarkAsSold = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!id || !bike) return;
@@ -177,7 +258,12 @@ export default function BikeDetails() {
           </div>
 
           {bike.images?.[0] ? (
-            <img src={bike.images[0]} alt="Bike" className="w-full h-full object-cover opacity-80" />
+            <img
+              src={bike.images[0]}
+              alt="Bike"
+              onClick={() => setShowGallery(true)}
+              className="w-full h-full object-cover opacity-80 cursor-pointer"
+            />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-white/40 font-bold">No Photos Added</div>
           )}
@@ -190,9 +276,9 @@ export default function BikeDetails() {
               {bike.status.replace('-', ' ')}
             </span>
             
-            {bike.images && bike.images.length > 1 && (
+            {bike.images && bike.images.length > 0 && (
               <button onClick={() => setShowGallery(true)} className="px-3 py-1.5 bg-black/50 backdrop-blur-md text-white rounded-lg flex items-center gap-1.5 text-xs font-bold border border-white/20 cursor-pointer">
-                <Images size={14} /> {bike.images.length} Photos
+                <Images size={14} /> {bike.images.length} {bike.images.length === 1 ? "Photo" : "Photos"}
               </button>
             )}
           </div>
@@ -251,12 +337,12 @@ export default function BikeDetails() {
               </div>
             </div>
 
-            {/* Expenses Section */}
+            {/* Expenses Section (WITH EDIT & DELETE) */}
             <div className="border-t border-slate-100 pt-5">
               <div className="flex justify-between items-center mb-3">
                 <h3 className="text-sm font-extrabold text-slate-900">Reconditioning / Expenses</h3>
                 {bike.status === 'in-stock' && (
-                  <button onClick={() => setShowExpenseModal(true)} className="flex items-center gap-1 text-[10px] font-extrabold bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 cursor-pointer">
+                  <button onClick={openAddExpenseModal} className="flex items-center gap-1 text-[10px] font-extrabold bg-blue-50 text-blue-600 px-2 py-1 rounded border border-blue-100 cursor-pointer">
                     <Plus size={12}/> Add Expense
                   </button>
                 )}
@@ -267,15 +353,34 @@ export default function BikeDetails() {
               ) : (
                 <div className="space-y-2">
                   {bike.expenses.map(exp => (
-                    <div key={exp.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 border border-slate-100">
-                      <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center"><Wrench size={14}/></div>
-                        <div>
-                          <p className="text-sm font-bold text-slate-900">{exp.description}</p>
-                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(exp.date).toLocaleDateString()}</p>
+                    <div key={exp.id} className="flex justify-between items-center p-3 rounded-xl bg-slate-50 border border-slate-100 gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className="w-8 h-8 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center shrink-0"><Wrench size={14}/></div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-bold text-slate-900 truncate">{exp.description}</p>
+                          <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">{new Date(exp.date).toLocaleDateString('en-GB')}</p>
                         </div>
                       </div>
-                      <span className="font-black text-slate-900 flex items-center"><IndianRupee size={14}/>{exp.amount}</span>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="font-black text-slate-900 flex items-center text-sm mr-1">
+                          <IndianRupee size={13}/>{exp.amount.toLocaleString('en-IN')}
+                        </span>
+                        <button
+                          onClick={() => openEditExpenseModal(exp)}
+                          className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border-none cursor-pointer hover:bg-blue-100 transition-colors"
+                          title="Edit Expense"
+                        >
+                          <Edit size={13} />
+                        </button>
+                        <button
+                          onClick={() => setExpenseToDelete(exp)}
+                          className="w-7 h-7 rounded-lg bg-red-50 text-red-500 flex items-center justify-center border-none cursor-pointer hover:bg-red-100 transition-colors"
+                          title="Delete Expense"
+                        >
+                          <Trash2 size={13} />
+                        </button>
+                      </div>
                     </div>
                   ))}
                   <div className="flex justify-between items-center text-sm font-extrabold pt-2 text-slate-600">
@@ -290,15 +395,15 @@ export default function BikeDetails() {
             <div className="border-t border-slate-100 pt-5">
               <h3 className="text-sm font-extrabold text-slate-900 mb-3">Documents</h3>
               <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  {[{url: bike.rcFrontUrl, name: 'RC Front'}, {url: bike.rcBackUrl, name: 'RC Back'}, {url: bike.insuranceUrl, name: 'Insurance'}, {url: bike.sellerIdProofUrl, name: 'Seller ID'}].map((doc, idx) => (
+                  {[{url: bike.rcFrontUrl, name: 'RC Front'}, {url: bike.rcBackUrl, name: 'RC Back'}, {url: bike.insuranceUrl, name: 'Insurance'}, {url: bike.sellerIdProofUrl, name: 'Seller ID'}].map((docItem, idx) => (
                     <div key={idx} className="shrink-0 w-24 flex flex-col gap-1">
                       <div 
-                        onClick={() => doc.url && setViewDoc({url: doc.url, title: doc.name})}
-                        className={cn("w-full h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center transition-colors", doc.url ? "cursor-pointer hover:border-blue-300" : "")}
+                        onClick={() => docItem.url && setViewDoc({url: docItem.url, title: docItem.name})}
+                        className={cn("w-full h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center transition-colors", docItem.url ? "cursor-pointer hover:border-blue-300" : "")}
                       >
-                          {doc.url ? <img src={doc.url} className="w-full h-full object-cover" /> : <span className="text-[10px] font-bold text-slate-300">N/A</span>}
+                          {docItem.url ? <img src={docItem.url} className="w-full h-full object-cover" alt={docItem.name} /> : <span className="text-[10px] font-bold text-slate-300">N/A</span>}
                       </div>
-                      <p className="text-[9px] font-extrabold text-slate-500 text-center uppercase">{doc.name}</p>
+                      <p className="text-[9px] font-extrabold text-slate-500 text-center uppercase">{docItem.name}</p>
                     </div>
                   ))}
               </div>
@@ -379,7 +484,7 @@ export default function BikeDetails() {
         message={successAction?.message || ""} 
       />
       
-      {/* 🔴 DELETE CONFIRM ALERT */}
+      {/* 🔴 DELETE BIKE CONFIRM ALERT */}
       <ConfirmAlert 
         isOpen={showDeleteAlert}
         title="Permanent Delete"
@@ -390,6 +495,19 @@ export default function BikeDetails() {
         icon={<Trash2 size={28} />}
         onConfirm={handleDelete}
         onCancel={() => setShowDeleteAlert(false)}
+      />
+
+      {/* 🔴 DELETE EXPENSE CONFIRM ALERT */}
+      <ConfirmAlert 
+        isOpen={!!expenseToDelete}
+        title="Delete Expense"
+        message={`Remove "${expenseToDelete?.description}" (₹${expenseToDelete?.amount?.toLocaleString('en-IN')}) from expenses?`}
+        confirmText="Delete"
+        isDanger={true}
+        isLoading={isProcessingAction}
+        icon={<Trash2 size={28} />}
+        onConfirm={handleDeleteExpense}
+        onCancel={() => setExpenseToDelete(null)}
       />
 
       {/* 🟠 CUSTOM RETURN MODAL WITH TEXTBOX */}
@@ -433,46 +551,68 @@ export default function BikeDetails() {
         </div>
       )}
 
-      {/* ✨ NEW: DOCUMENT VIEWER MODAL ✨ */}
+      {/* 📄 DOCUMENT VIEWER MODAL (WITH DOWNLOAD BUTTON) */}
       {viewDoc && (
         <div className="absolute inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-200">
           <div className="p-4 flex justify-between items-center text-white">
             <span className="font-bold text-sm tracking-wide">{viewDoc.title}</span>
-            <button onClick={() => setViewDoc(null)} className="p-2 bg-white/10 rounded-full cursor-pointer border-none text-white"><X size={20}/></button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => handleDownloadImage(viewDoc.url, viewDoc.title)}
+                disabled={isDownloading}
+                className="px-3 py-2 bg-blue-600 hover:bg-blue-700 rounded-full flex items-center gap-1.5 text-xs font-bold cursor-pointer border-none text-white transition-colors"
+              >
+                {isDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                Download
+              </button>
+              <button onClick={() => setViewDoc(null)} className="p-2 bg-white/10 rounded-full cursor-pointer border-none text-white"><X size={20}/></button>
+            </div>
           </div>
           <div className="flex-1 flex items-center justify-center p-4">
-            <img src={viewDoc.url} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
+            <img src={viewDoc.url} alt={viewDoc.title} className="max-w-full max-h-[85vh] object-contain rounded-lg" />
           </div>
         </div>
       )}
 
-      {/* 📸 FULL IMAGE GALLERY MODAL */}
+      {/* 📸 FULL IMAGE GALLERY MODAL (WITH PER-PHOTO DOWNLOAD) */}
       {showGallery && (
         <div className="absolute inset-0 z-[100] bg-black flex flex-col animate-in fade-in duration-200">
           <div className="p-4 flex justify-between items-center text-white">
-            <span className="font-bold text-sm">Gallery ({bike.images.length} Photos)</span>
+            <span className="font-bold text-sm">Gallery ({bike.images.length} {bike.images.length === 1 ? "Photo" : "Photos"})</span>
             <button onClick={() => setShowGallery(false)} className="p-2 bg-white/10 rounded-full cursor-pointer border-none text-white"><X size={20}/></button>
           </div>
           <div className="flex-1 flex overflow-x-auto snap-x snap-mandatory no-scrollbar items-center">
             {bike.images.map((img, idx) => (
-              <div key={idx} className="w-full shrink-0 h-auto snap-center flex justify-center p-2">
-                <img src={img} className="w-full max-h-[80vh] object-contain rounded-lg" />
+              <div key={idx} className="w-full shrink-0 h-full snap-center flex flex-col items-center justify-center p-4 gap-4">
+                <img src={img} alt={`Bike ${idx + 1}`} className="w-full max-h-[70vh] object-contain rounded-lg" />
+                <button
+                  onClick={() => handleDownloadImage(img, `Photo_${idx + 1}`)}
+                  disabled={isDownloading}
+                  className="px-5 py-2.5 bg-white/15 hover:bg-white/25 backdrop-blur-md text-white rounded-full flex items-center gap-2 text-xs font-bold border border-white/20 cursor-pointer transition-colors"
+                >
+                  {isDownloading ? <Loader2 size={15} className="animate-spin" /> : <Download size={15} />}
+                  Download Photo {idx + 1}
+                </button>
               </div>
             ))}
           </div>
-          <div className="p-6 text-center text-xs font-bold text-white/50 uppercase tracking-widest">Swipe left/right</div>
+          {bike.images.length > 1 && (
+            <div className="p-4 text-center text-xs font-bold text-white/50 uppercase tracking-widest">Swipe left/right</div>
+          )}
         </div>
       )}
 
-      {/* 💰 ADD EXPENSE MODAL */}
+      {/* 💰 ADD / EDIT EXPENSE MODAL */}
       {showExpenseModal && (
         <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 animate-in fade-in">
           <div className="w-full max-w-sm bg-white rounded-3xl p-6 shadow-2xl animate-in zoom-in-95">
             <div className="flex justify-between items-center mb-5">
-              <h2 className="text-lg font-black text-slate-900">Add Expense</h2>
-              <button onClick={() => setShowExpenseModal(false)} className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 border-none cursor-pointer"><X size={16}/></button>
+              <h2 className="text-lg font-black text-slate-900">
+                {editingExpenseId ? "Edit Expense" : "Add Expense"}
+              </h2>
+              <button onClick={closeExpenseModal} className="w-8 h-8 bg-slate-100 rounded-full flex items-center justify-center text-slate-500 border-none cursor-pointer"><X size={16}/></button>
             </div>
-            <form onSubmit={handleAddExpense} className="space-y-4">
+            <form onSubmit={handleSaveExpense} className="space-y-4">
               <div>
                 <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Description</label>
                 <input type="text" required value={expDesc} onChange={e => setExpDesc(e.target.value)} placeholder="Water Wash & Polish" className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none text-sm font-bold" />
@@ -482,7 +622,7 @@ export default function BikeDetails() {
                 <input type="number" required value={expAmt} onChange={e => setExpAmt(e.target.value)} placeholder="₹" className="w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 outline-none text-xl font-black text-slate-900" />
               </div>
               <button type="submit" disabled={isSubmitting} className="w-full py-4 mt-2 rounded-xl bg-blue-600 text-white font-extrabold text-sm hover:bg-blue-700 transition-all flex justify-center items-center cursor-pointer border-none">
-                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : "Save Expense"}
+                  {isSubmitting ? <Loader2 size={18} className="animate-spin" /> : (editingExpenseId ? "Update Expense" : "Save Expense")}
               </button>
             </form>
           </div>
@@ -533,7 +673,7 @@ export default function BikeDetails() {
                       <label className="block text-[10px] font-extrabold text-slate-500 uppercase tracking-widest mb-1.5">Buyer ID Proof Image</label>
                       <div className="relative w-full h-24 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50 flex flex-col items-center justify-center hover:bg-slate-100 transition-colors overflow-hidden">
                           <input type="file" accept="image/*" onChange={(e) => e.target.files?.[0] && setBuyerIdFile({file: e.target.files[0], preview: URL.createObjectURL(e.target.files[0])})} className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10" />
-                          {buyerIdFile ? <img src={buyerIdFile.preview} className="w-full h-full object-cover" /> : <><ImagePlus size={20} className="text-slate-400 mb-1" /><span className="text-[10px] font-bold text-slate-500">Tap to upload ID</span></>}
+                          {buyerIdFile ? <img src={buyerIdFile.preview} className="w-full h-full object-cover" alt="Buyer ID preview" /> : <><ImagePlus size={20} className="text-slate-400 mb-1" /><span className="text-[10px] font-bold text-slate-500">Tap to upload ID</span></>}
                       </div>
                     </div>
                 </form>
