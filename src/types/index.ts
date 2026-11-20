@@ -61,3 +61,23 @@ export interface Bike {
 
   createdAt: number;
 }
+
+export type MaintenanceCategory =
+  | "Rent"
+  | "Electricity"
+  | "Salary"
+  | "Water"
+  | "Marketing"
+  | "Maintenance"
+  | "Other"
+  | (string & {});
+
+export interface MaintenanceExpense {
+  id: string;
+  category: MaintenanceCategory;
+  title: string;
+  amount: number;
+  date: string; // Format: YYYY-MM-DD
+  notes?: string;
+  createdAt: number;
+}

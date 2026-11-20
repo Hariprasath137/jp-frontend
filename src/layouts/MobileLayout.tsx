@@ -1,7 +1,7 @@
 // src/layouts/MobileLayout.tsx
 import { useState, useEffect } from "react";
 import { Outlet, useNavigate } from "react-router-dom";
-import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus, Undo2, CheckCircle } from "lucide-react"; // Trash2 ah thookiyachu
+import { Menu, Bell, X, LogOut, LayoutDashboard, Bike, Plus, Undo2, CheckCircle, BarChart3, Receipt } from "lucide-react"; // Trash2 ah thookiyachu
 import { cn } from "../lib/utils";
 import { useAuthStore } from "../stores/useAuthStore";
 import { useNotificationStore } from "../stores/useNotificationStore"; 
@@ -102,6 +102,19 @@ export default function MobileLayout() {
             <button onClick={() => { navigate("/returned-bikes"); setIsDrawerOpen(false); }} className="flex items-center w-full p-4 rounded-xl hover:bg-slate-50 text-slate-700 font-semibold gap-4 cursor-pointer border-none bg-transparent transition-colors">
               <Undo2 size={20} className="text-slate-400" /> Returned Bikes
             </button>
+            <button
+            onClick={() => { navigate("/total-gross"); setIsDrawerOpen(false); }}
+            className="flex items-center w-full p-4 rounded-xl hover:bg-indigo-50 text-indigo-700 font-bold gap-4 cursor-pointer border-none bg-transparent transition-colors"
+          >
+            <BarChart3 size={20} className="text-indigo-500" /> Total Gross
+          </button>
+
+          <button
+            onClick={() => { navigate("/maintenance"); setIsDrawerOpen(false); }}
+            className="flex items-center w-full p-4 rounded-xl hover:bg-rose-50 text-rose-700 font-bold gap-4 cursor-pointer border-none bg-transparent transition-colors"
+          >
+            <Receipt size={20} className="text-rose-500" /> Shop Maintenance
+          </button>
           </div>
           
           <div className="p-4 border-t border-slate-100 bg-slate-50/50 shrink-0">

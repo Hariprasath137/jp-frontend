@@ -25,27 +25,40 @@ const getExpensesTotal = (b: any) =>
 export default function NetProfitPage() {
   const navigate = useNavigate();
   const [bikes, setBikes] = useState<any[]>([]);
+  const [maintenance, setMaintenance] = useState<any[]>([]);
   const months = getPastMonths();
   const [selectedMonth, setSelectedMonth] = useState(months[0].value);
 
   useEffect(() => {
     const q = query(collection(db, "bikes"), where("status", "==", "sold"));
-    const unsub = onSnapshot(q, (snap) => {
+    const unsubBikes = onSnapshot(q, (snap) => {
       const data: any[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
       setBikes(data);
     });
-    return () => unsub();
+
+    const unsubMaint = onSnapshot(collection(db, "maintenance"), (snap) => {
+      const data: any[] = snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      setMaintenance(data);
+    });
+
+    return () => {
+      unsubBikes();
+      unsubMaint();
+    };
   }, []);
 
   const filteredBikes = bikes.filter((b) => b.soldDate && b.soldDate.startsWith(selectedMonth));
+  const filteredMaint = maintenance.filter((m) => m.date && m.date.startsWith(selectedMonth));
 
   const totalSales = filteredBikes.reduce((acc, b) => acc + Number(b.soldPrice || 0), 0);
-  const totalCost = filteredBikes.reduce(
+  const totalBikeCost = filteredBikes.reduce(
     (acc, b) =>
       acc + Number(b.purchasePrice || 0) + Number(b.pendingChallan || 0) + getExpensesTotal(b),
     0
   );
-  const totalProfit = totalSales - totalCost;
+  const grossProfit = totalSales - totalBikeCost;
+  const totalMaintenance = filteredMaint.reduce((acc, m) => acc + Number(m.amount || 0), 0);
+  const netProfit = grossProfit - totalMaintenance;
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-10">
@@ -75,32 +88,39 @@ export default function NetProfitPage() {
         {/* Top Calculation Card */}
         <div className="bg-green-600 text-white p-5 rounded-2xl shadow-lg shadow-green-200 mb-6">
           <p className="text-green-100 text-sm mb-1 font-medium">
-            Profit for {months.find((m) => m.value === selectedMonth)?.label}
+            Net Profit • {months.find((m) => m.value === selectedMonth)?.label}
           </p>
           <h2 className="text-3xl font-black flex items-center mb-4">
             <IndianRupee size={28} />
-            {totalProfit.toLocaleString("en-IN")}
+            {netProfit.toLocaleString("en-IN")}
           </h2>
 
-          <div className="flex justify-between border-t border-green-500 pt-3 text-sm">
+          <div className="grid grid-cols-3 gap-2 border-t border-green-500 pt-3 text-xs">
             <div>
-              <p className="text-green-200">Total Sales</p>
-              <p className="font-bold flex items-center">
-                <IndianRupee size={14} />
-                {totalSales.toLocaleString("en-IN")}
+              <p className="text-green-200">Gross Profit</p>
+              <p className="font-bold flex items-center mt-0.5">
+                <IndianRupee size={12} />
+                {grossProfit.toLocaleString("en-IN")}
+              </p>
+            </div>
+            <div>
+              <p className="text-green-200">Shop Bills</p>
+              <p className="font-bold text-rose-200 flex items-center mt-0.5">
+                - <IndianRupee size={12} />
+                {totalMaintenance.toLocaleString("en-IN")}
               </p>
             </div>
             <div className="text-right">
-              <p className="text-green-200">Total Cost (Buy+Challan+Exp)</p>
-              <p className="font-bold flex items-center justify-end">
-                <IndianRupee size={14} />
-                {totalCost.toLocaleString("en-IN")}
+              <p className="text-green-200">Total Sales</p>
+              <p className="font-bold flex items-center justify-end mt-0.5">
+                <IndianRupee size={12} />
+                {totalSales.toLocaleString("en-IN")}
               </p>
             </div>
           </div>
         </div>
 
-        {/* List of Bikes */}
+        {/* List of Sold Bikes */}
         <h3 className="font-bold text-slate-400 uppercase text-xs tracking-wider mb-3">
           Sold Bikes ({filteredBikes.length})
         </h3>

@@ -1,14 +1,29 @@
 // src/pages/AddBike.tsx
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2, ArrowLeft, Plus, X, FileText, ImagePlus } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Plus,
+  X,
+  FileText,
+  ImagePlus,
+  Crop,
+} from "lucide-react";
 import { uploadImageToCloudinary } from "../lib/uploadImage";
 import { addNewBike } from "../services/bikeService";
+import DocumentEditorModal from "../components/DocumentEditorModal";
 import type { Bike, BikeDocument } from "../types";
 import { cn } from "../lib/utils";
 
 type ImageState = { file: File; preview: string };
-type DocImageState = { id: string; file: File; preview: string; name: string };
+type DocImageState = {
+  id: string;
+  file: File;
+  preview: string;
+  name: string;
+  isEdited?: boolean;
+};
 
 export default function AddBike() {
   const navigate = useNavigate();
@@ -19,6 +34,7 @@ export default function AddBike() {
 
   // Dynamic Multiple Documents with Custom Name
   const [docImages, setDocImages] = useState<DocImageState[]>([]);
+  const [editingDocId, setEditingDocId] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
     make: "",
@@ -34,7 +50,9 @@ export default function AddBike() {
     notes: "",
   });
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleInputChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
@@ -57,7 +75,7 @@ export default function AddBike() {
 
   // --- DYNAMIC DOCUMENTS ---
   const handleMultipleDocs = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files) {
+    if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       const newDocs: DocImageState[] = files.map((file, idx) => ({
         id: `${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
@@ -66,6 +84,11 @@ export default function AddBike() {
         name: "",
       }));
       setDocImages((prev) => [...prev, ...newDocs]);
+
+      // Single document select panna udane Crop/Markup Editor auto-open aagum
+      if (newDocs.length === 1) {
+        setEditingDocId(newDocs[0].id);
+      }
       e.target.value = "";
     }
   };
@@ -78,6 +101,21 @@ export default function AddBike() {
 
   const removeDocImage = (docId: string) => {
     setDocImages((prev) => prev.filter((doc) => doc.id !== docId));
+    if (editingDocId === docId) setEditingDocId(null);
+  };
+
+  const activeEditingDoc = docImages.find((d) => d.id === editingDocId) || null;
+
+  const handleSaveEditedDoc = (editedFile: File, editedPreview: string) => {
+    if (!editingDocId) return;
+    setDocImages((prev) =>
+      prev.map((doc) =>
+        doc.id === editingDocId
+          ? { ...doc, file: editedFile, preview: editedPreview, isEdited: true }
+          : doc
+      )
+    );
+    setEditingDocId(null);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -85,7 +123,6 @@ export default function AddBike() {
     setIsLoading(true);
 
     try {
-      // 1. Upload Bike Images & Documents Concurrently
       const [uploadedBikeImages, uploadedDocs] = await Promise.all([
         Promise.all(bikeImages.map((img) => uploadImageToCloudinary(img.file))),
         Promise.all(
@@ -100,7 +137,6 @@ export default function AddBike() {
         ),
       ]);
 
-      // 2. Prepare Data
       const newBike: Omit<Bike, "id" | "createdAt"> = {
         make: formData.make,
         model: formData.model,
@@ -119,7 +155,6 @@ export default function AddBike() {
         documents: uploadedDocs,
       };
 
-      // 3. Save to DB
       await addNewBike(newBike);
       navigate("/inventory");
     } catch (error) {
@@ -141,7 +176,9 @@ export default function AddBike() {
           <ArrowLeft size={20} />
         </button>
         <div>
-          <h1 className="text-xl font-bold text-slate-900 leading-tight">Add New Bike</h1>
+          <h1 className="text-xl font-bold text-slate-900 leading-tight">
+            Add New Bike
+          </h1>
           <p className="text-xs text-slate-500 font-semibold uppercase tracking-wider">
             Inventory Entry
           </p>
@@ -164,7 +201,11 @@ export default function AddBike() {
                 key={idx}
                 className="relative w-28 h-28 shrink-0 rounded-xl overflow-hidden border border-slate-200"
               >
-                <img src={img.preview} alt="bike preview" className="w-full h-full object-cover" />
+                <img
+                  src={img.preview}
+                  alt="bike preview"
+                  className="w-full h-full object-cover"
+                />
                 <button
                   type="button"
                   onClick={() => removeBikeImage(idx)}
@@ -189,7 +230,7 @@ export default function AddBike() {
           </div>
         </div>
 
-        {/* 2. Dynamic Multiple Documents Section (With Custom Name) */}
+        {/* 2. Dynamic Multiple Documents Section (With Crop & Markup Editor) */}
         <div className="bg-white p-5 rounded-2xl shadow-sm border border-slate-200 space-y-4">
           <div className="flex justify-between items-center border-b border-slate-100 pb-2">
             <h3 className="text-sm font-bold text-slate-900">Documents</h3>
@@ -198,17 +239,31 @@ export default function AddBike() {
             </span>
           </div>
 
-          {/* Added Documents List with Name Input */}
           {docImages.length > 0 && (
             <div className="space-y-3">
               {docImages.map((doc, idx) => (
                 <div
                   key={doc.id}
-                  className="flex items-center gap-3 p-2.5 rounded-xl bg-slate-50 border border-slate-200"
+                  className="flex items-center gap-2.5 p-2.5 rounded-xl bg-slate-50 border border-slate-200"
                 >
-                  <div className="w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-white">
-                    <img src={doc.preview} alt="doc preview" className="w-full h-full object-cover" />
-                  </div>
+                  {/* Thumbnail (Tap to Crop / Mark) */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingDocId(doc.id)}
+                    className="relative w-14 h-14 rounded-lg overflow-hidden border border-slate-200 shrink-0 bg-white p-0 cursor-pointer"
+                    title="Crop or Mark Document"
+                  >
+                    <img
+                      src={doc.preview}
+                      alt="doc preview"
+                      className="w-full h-full object-cover"
+                    />
+                    {doc.isEdited && (
+                      <span className="absolute bottom-0.5 left-0.5 bg-emerald-600 text-white text-[7px] font-extrabold px-1 rounded uppercase">
+                        Edited
+                      </span>
+                    )}
+                  </button>
 
                   <div className="flex-1 min-w-0">
                     <label className="block text-[9px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">
@@ -218,12 +273,23 @@ export default function AddBike() {
                       type="text"
                       value={doc.name}
                       onChange={(e) => handleDocNameChange(doc.id, e.target.value)}
-                      placeholder={`e.g. RC Front, Insurance, NOC...`}
+                      placeholder="e.g. RC Front, Insurance, NOC..."
                       required
                       className="w-full px-3 py-2 rounded-lg bg-white border border-slate-200 focus:ring-2 focus:ring-slate-900 outline-none text-sm font-bold text-slate-900"
                     />
                   </div>
 
+                  {/* Crop / Draw Button */}
+                  <button
+                    type="button"
+                    onClick={() => setEditingDocId(doc.id)}
+                    className="w-8 h-8 rounded-lg bg-blue-50 text-blue-600 flex items-center justify-center border-none cursor-pointer shrink-0 hover:bg-blue-100"
+                    title="Crop & Mark Document"
+                  >
+                    <Crop size={15} />
+                  </button>
+
+                  {/* Remove Button */}
                   <button
                     type="button"
                     onClick={() => removeDocImage(doc.id)}
@@ -247,9 +313,11 @@ export default function AddBike() {
               className="absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10"
             />
             <FileText size={22} className="mb-1 text-slate-400" />
-            <span className="text-xs font-bold text-slate-600">+ Add Document Photos</span>
+            <span className="text-xs font-bold text-slate-600">
+              + Add Document Photos
+            </span>
             <span className="text-[10px] font-semibold text-slate-400 mt-0.5">
-              Select one or multiple & give each a name
+              Tap crop icon to trim, circle or highlight
             </span>
           </div>
         </div>
@@ -445,7 +513,8 @@ export default function AddBike() {
         >
           {isLoading ? (
             <>
-              <Loader2 size={20} className="animate-spin" /> Uploading Data & Images...
+              <Loader2 size={20} className="animate-spin" /> Uploading Data &
+              Images...
             </>
           ) : (
             <>
@@ -454,6 +523,15 @@ export default function AddBike() {
           )}
         </button>
       </form>
+
+      {/* DOCUMENT CROP & MARKUP EDITOR */}
+      <DocumentEditorModal
+        isOpen={!!activeEditingDoc}
+        imageSrc={activeEditingDoc?.preview || ""}
+        title={activeEditingDoc?.name || "Edit Document"}
+        onClose={() => setEditingDocId(null)}
+        onSave={handleSaveEditedDoc}
+      />
     </div>
   );
 }

@@ -16,6 +16,8 @@ import NetProfitPage from './pages/NetProfitPage';
 import ReturnedBikesPage from './pages/ReturnedBikesPage';
 import EditBikePage from './pages/EditBikePage';
 import SoldBikesPage from './pages/SoldBikesPage';
+import MaintenancePage from './pages/MaintenancePage';
+import TotalGrossPage from './pages/TotalGrossPage';
 
 function App() {
   const { user, isInitialized, initAuth } = useAuthStore();
@@ -52,6 +54,8 @@ function App() {
           <Route path="edit-bike/:id" element={<EditBikePage />} />
           <Route path="stock-details" element={<BikesInStockPage />} />
           <Route path="sold-bikes" element={<SoldBikesPage />} />
+          <Route path="maintenance" element={<MaintenancePage />} />
+          <Route path="total-gross" element={<TotalGrossPage />} />
         </Route>
       </Routes>
     </BrowserRouter>
