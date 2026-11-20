@@ -2,12 +2,12 @@ importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js'
 importScripts('https://www.gstatic.com/firebasejs/10.8.0/firebase-messaging-compat.js');
 
 const firebaseConfig = {
-  apiKey: "AIzaSyCQWUDdYEaUK1kSk6KIrMWVBG0yLF6FLyU",
-  authDomain: "jp-bikes.firebaseapp.com",
-  projectId: "jp-bikes",
-  storageBucket: "jp-bikes.firebasestorage.app",
-  messagingSenderId: "686965028440",
-  appId: "1:686965028440:web:0fd6367d5890de46bd3c2d"
+  apiKey: "AIzaSyCtAwKrPkUNiPXINi5Jj5Q5lOsGD8mqC7E",
+  authDomain: "jp-bikes-126ad.firebaseapp.com",
+  projectId: "jp-bikes-126ad",
+  storageBucket: "jp-bikes-126ad.firebasestorage.app",
+  messagingSenderId: "589340720111",
+  appId: "1:589340720111:web:aef8149e714e05c41f141a"
 };
 
 firebase.initializeApp(firebaseConfig);
