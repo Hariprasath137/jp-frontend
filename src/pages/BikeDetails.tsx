@@ -63,6 +63,16 @@ export default function BikeDetails() {
   const actualTotalCost = (bike?.purchasePrice || 0) + (bike?.pendingChallan || 0) + totalExpenses;
   const expectedProfit = bike && soldPrice ? (Number(soldPrice) - actualTotalCost) : 0;
 
+  // Unified documents list (supports new custom-named docs + old 4 legacy fields)
+  const bikeDocuments = Array.isArray(bike?.documents)
+    ? bike.documents
+    : [
+        bike?.rcFrontUrl ? { id: "rc-front", name: "RC Front", url: bike.rcFrontUrl } : null,
+        bike?.rcBackUrl ? { id: "rc-back", name: "RC Back", url: bike.rcBackUrl } : null,
+        bike?.insuranceUrl ? { id: "insurance", name: "Insurance", url: bike.insuranceUrl } : null,
+        bike?.sellerIdProofUrl ? { id: "seller-id", name: "Seller ID", url: bike.sellerIdProofUrl } : null,
+      ].filter((d): d is { id: string; name: string; url: string } => Boolean(d));
+
   // --- DOWNLOAD IMAGE HELPER (Works for Photos & Documents) ---
   const handleDownloadImage = async (url: string, label: string) => {
     if (!url || isDownloading) return;
@@ -393,20 +403,36 @@ export default function BikeDetails() {
 
             {/* Documents Showcase */}
             <div className="border-t border-slate-100 pt-5">
-              <h3 className="text-sm font-extrabold text-slate-900 mb-3">Documents</h3>
-              <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
-                  {[{url: bike.rcFrontUrl, name: 'RC Front'}, {url: bike.rcBackUrl, name: 'RC Back'}, {url: bike.insuranceUrl, name: 'Insurance'}, {url: bike.sellerIdProofUrl, name: 'Seller ID'}].map((docItem, idx) => (
-                    <div key={idx} className="shrink-0 w-24 flex flex-col gap-1">
-                      <div 
-                        onClick={() => docItem.url && setViewDoc({url: docItem.url, title: docItem.name})}
-                        className={cn("w-full h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center transition-colors", docItem.url ? "cursor-pointer hover:border-blue-300" : "")}
+              <div className="flex justify-between items-center mb-3">
+                <h3 className="text-sm font-extrabold text-slate-900">Documents</h3>
+                <span className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest">
+                  {bikeDocuments.length} {bikeDocuments.length === 1 ? "Doc" : "Docs"}
+                </span>
+              </div>
+
+              {bikeDocuments.length === 0 ? (
+                <p className="text-xs font-semibold text-slate-400 italic">No documents uploaded.</p>
+              ) : (
+                <div className="flex gap-3 overflow-x-auto no-scrollbar pb-2">
+                  {bikeDocuments.map((docItem) => (
+                    <div key={docItem.id} className="shrink-0 w-24 flex flex-col gap-1.5">
+                      <div
+                        onClick={() => setViewDoc({ url: docItem.url, title: docItem.name })}
+                        className="w-full h-16 rounded-xl border border-slate-200 bg-slate-50 overflow-hidden flex items-center justify-center cursor-pointer hover:border-blue-300 transition-colors"
                       >
-                          {docItem.url ? <img src={docItem.url} className="w-full h-full object-cover" alt={docItem.name} /> : <span className="text-[10px] font-bold text-slate-300">N/A</span>}
+                        <img
+                          src={docItem.url}
+                          className="w-full h-full object-cover"
+                          alt={docItem.name}
+                        />
                       </div>
-                      <p className="text-[9px] font-extrabold text-slate-500 text-center uppercase">{docItem.name}</p>
+                      <p className="text-[10px] font-extrabold text-slate-600 text-center uppercase truncate">
+                        {docItem.name}
+                      </p>
                     </div>
                   ))}
-              </div>
+                </div>
+              )}
             </div>
 
             {/* Notes */}

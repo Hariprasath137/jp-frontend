@@ -14,9 +14,15 @@ export interface CustomerDetails {
   idProofUrl?: string;
 }
 
+export interface BikeDocument {
+  id: string;
+  name: string;
+  url: string;
+}
+
 export interface Bike {
   id?: string;
-  
+
   // Basic Details
   make: string;
   model: string;
@@ -24,29 +30,34 @@ export interface Bike {
   regNo: string;
   kmDriven: number;
   pendingChallan: number;
-  notes?: string; // <-- Puthusa add pannirukom (For text box)
-  
+  notes?: string;
+
   // Purchase Details
   purchaseDate: string;
   purchasePrice: number;
   sellerName: string;
   sellerPhone: string;
-  
+
   // Stock Status
-  status: 'in-stock' | 'sold' | 'returned';
+  status: "in-stock" | "sold" | "returned";
   expenses: Expense[];
-  
-  // Media (Photos & Docs)
+  returnedDate?: string;
+  returnReason?: string;
+
+  // Media (Photos & Dynamic Docs)
   images: string[];
-  rcFrontUrl?: string;     // <-- Changed
-  rcBackUrl?: string;      // <-- Changed
-  insuranceUrl?: string;   // <-- Puthusa add pannirukom
-  sellerIdProofUrl?: string; 
-  
+  documents?: BikeDocument[];
+
+  // Legacy fields (Old bikes backward compatibility)
+  rcFrontUrl?: string;
+  rcBackUrl?: string;
+  insuranceUrl?: string;
+  sellerIdProofUrl?: string;
+
   // Sales Details
   soldDate?: string;
   soldPrice?: number;
   customer?: CustomerDetails;
-  
+
   createdAt: number;
 }
