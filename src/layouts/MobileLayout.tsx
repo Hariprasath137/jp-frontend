@@ -74,7 +74,7 @@ export default function MobileLayout() {
   const { markAsRead } = useNotificationStore();
 
   return (
-    <div className="fixed w-full h-full flex items-center justify-center overflow-hidden bg-slate-100">
+   <div className="fixed inset-0 w-full h-[100dvh] flex items-center justify-center overflow-hidden bg-slate-100">
       <div className={cn("relative z-10 w-full h-full flex overflow-hidden bg-white sm:max-w-[420px] sm:h-[90vh] sm:rounded-[2.5rem] sm:shadow-2xl sm:border-[8px] border-slate-300")}>
         
         {/* 1. Left Sidebar Drawer */}

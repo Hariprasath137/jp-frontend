@@ -18,7 +18,21 @@ export default function BikesInStockPage() {
     return () => unsub();
   }, []);
 
-  const totalValue = bikes.reduce((acc, b) => acc + Number(b.purchasePrice || 0) + Number(b.expense || 0), 0);
+ // Add helper at top of BikesInStockPage.tsx
+const getExpensesTotal = (b: any) =>
+  Array.isArray(b.expenses)
+    ? b.expenses.reduce((sum: number, exp: any) => sum + Number(exp.amount || 0), 0)
+    : Number(b.expense || 0);
+
+// Replace totalValue calculation:
+const totalValue = bikes.reduce(
+  (acc, b) =>
+    acc + Number(b.purchasePrice || 0) + Number(b.pendingChallan || 0) + getExpensesTotal(b),
+  0
+);
+
+// Inside card map, replace Expenses Done line:
+
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col pb-10">
@@ -50,7 +64,7 @@ export default function BikesInStockPage() {
                 <div className="text-xs text-slate-500 space-y-1">
                   <p className="flex justify-between"><span>Reg:</span> <span className="font-semibold text-slate-700">{bike.regNo}</span></p>
                   <p className="flex justify-between"><span>Purchase Price:</span> <span>₹{Number(bike.purchasePrice || 0).toLocaleString('en-IN')}</span></p>
-                  <p className="flex justify-between"><span>Expenses Done:</span> <span className="text-red-500">₹{Number(bike.expense || 0).toLocaleString('en-IN')}</span></p>
+                  <span>₹{getExpensesTotal(bike).toLocaleString("en-IN")}</span>
                   <p className="flex justify-between border-t border-slate-100 pt-1 mt-1"><span>Target Selling Price:</span> <span className="font-bold text-slate-900">₹{Number(bike.sellingPrice || 0).toLocaleString('en-IN')}</span></p>
                 </div>
               </div>
